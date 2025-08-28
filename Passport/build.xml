@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="PassportApplet" default="all" basedir=".">
+
+    <!-- 目录 -->
+    <property name="src.dir"     value="src"/>
+    <property name="build.dir"   value="build"/>
+    <property name="classes.dir" value="${build.dir}/classes"/>
+    <property name="cap.dir"     value="${build.dir}/cap"/>
+
+    <!-- JavaCard SDK 2.2.2 -->
+    <property name="javacard.sdk" value="C:/JavaCardKit-2.2.2"/>
+    <property name="export.path"  value="C:/JavaCardKit-2.2.2/api_export_files"/>
+
+    <!-- 包名 & AID（注意：converter.bat 支持 0x+冒号分隔；小写 x 最稳） -->
+    <property name="package.name" value="sos.passportapplet"/>
+    <property name="package.aid"  value="0xa0:0x00:0x00:0x02:0x47:0x10"/>
+    <property name="applet.class" value="sos.passportapplet.PassportApplet"/>
+    <property name="applet.aid"   value="0xa0:0x00:0x00:0x02:0x47:0x10:0x01"/>
+
+    <target name="clean">
+        <delete dir="${classes.dir}"/>
+        <delete dir="${cap.dir}"/>
+    </target>
+
+    <target name="init">
+        <mkdir dir="${classes.dir}"/>
+        <mkdir dir="${cap.dir}"/>
+    </target>
+
+    <!-- 用 JDK 8 跑 Ant；1.5 字节码最稳 -->
+    <target name="compile" depends="init">
+        <javac srcdir="${src.dir}"
+               destdir="${classes.dir}"
+               source="1.5" target="1.5"
+               encoding="UTF-8" debug="true"
+               includeantruntime="false">
+            <classpath>
+                <pathelement location="${javacard.sdk}/lib/api.jar"/>
+            </classpath>
+            <include name="sos/passportapplet/**/*.java"/>
+            <compilerarg value="-Xlint:-options"/>
+        </javac>
+    </target>
+
+    <!-- 用 converter.bat 生成 CAP；-applet 的两个参数分开传 -->
+    <target name="convert" depends="compile">
+  <java classname="com.sun.javacard.converter.Converter"
+        fork="true"
+        failonerror="true">
+    <classpath>
+      <pathelement location="${javacard.sdk}/lib/converter.jar"/>
+      <pathelement location="${javacard.sdk}/lib/offcardverifier.jar"/>
+      <pathelement location="${javacard.sdk}/lib/api.jar"/>
+    </classpath>
+
+    <arg value="-classdir"/><arg value="${classes.dir}"/>
+    <arg value="-exportpath"/><arg value="${export.path}"/>
+
+    <!-- -applet 后面两个参数必须分开传；AID 用 0x+冒号分隔 -->
+    <arg value="-applet"/>
+    <arg value="0xa0:0x00:0x00:0x02:0x47:0x10:0x01"/>
+    <arg value="${applet.class}"/>
+
+    <arg value="-out"/><arg value="CAP"/>
+    <arg value="-d"/><arg value="${cap.dir}"/>
+
+    <!-- 包名 + 包AID + 版本；AID 也可用 0x+冒号分隔 -->
+    <arg value="${package.name}"/>
+    <arg value="0xa0:0x00:0x00:0x02:0x47:0x10"/>
+    <arg value="1.0"/>
+  </java>
+</target>
+
+
+    <target name="all" depends="convert"/>
+</project>
